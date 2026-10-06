@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Levels Test Suite</title>
+  <script src="levels.js"></script>
+</head>
+<body>
+  <pre id="output"></pre>
+  <script>
+    const out = document.getElementById('output');
+    let allPassed = true;
+    out.textContent += `Loaded ${gameLevels.length} levels.\n`;
+
+    gameLevels.forEach((lvl, idx) => {
+      const state = lvl.initialState ? lvl.initialState() : {};
+      if (lvl.autoSolve) {
+        lvl.autoSolve(state, lvl);
+      }
+      const validator = lvl.validate || lvl.expectedLogic;
+      const res = validator ? validator(state, lvl) : { success: false };
+      const status = res.success ? "PASS" : "FAIL";
+      out.textContent += `Level ${lvl.id} [${lvl.shortTitle}]: ${status} - ${res.message || ''}\n`;
+      if (!res.success) allPassed = false;
+    });
+
+    out.textContent += `\nOVERALL RESULT: ${allPassed ? "ALL 13 LEVELS PASSED!" : "FAILURES DETECTED"}\n`;
+  </script>
+</body>
+</html>

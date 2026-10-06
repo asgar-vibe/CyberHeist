@@ -1,0 +1,1563 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CYBER HEIST // Terminal Detective - Computational Logic Simulator</title>
+  <meta name="description"
+    content="A retro-futuristic cyber terminal detective game teaching indexing, loops, filtering, and binary search logic.">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: JetBrains Mono & Share Tech Mono & Orbitron -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,600;0,800;1,400&family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap"
+    rel="stylesheet">
+  <!-- Scalable Levels Database -->
+  <script src="levels.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            cyber: {
+              black: '#080C10',
+              dark: '#0D1117',
+              panel: '#111722',
+              card: '#161F2E',
+              border: '#1E293B',
+              green: '#00FF66',
+              greenGlow: 'rgba(0, 255, 102, 0.4)',
+              orange: '#FF9900',
+              orangeGlow: 'rgba(255, 153, 0, 0.4)',
+              cyan: '#00F0FF',
+              red: '#FF2A55',
+              redGlow: 'rgba(255, 42, 85, 0.5)',
+              yellow: '#F59E0B'
+            }
+          },
+          fontFamily: {
+            mono: ['"JetBrains Mono"', '"Share Tech Mono"', 'monospace'],
+            tech: ['"Share Tech Mono"', 'monospace'],
+            display: ['"Orbitron"', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    /* CRT Scanline & Screen Effects */
+    body {
+      background-color: #080C10;
+      color: #E2E8F0;
+      overflow-x: hidden;
+    }
+
+    .crt-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 999;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%),
+        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      background-size: 100% 3px, 6px 100%;
+      opacity: 0.85;
+    }
+
+    .crt-vignette {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 998;
+      box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.85), inset 0 0 160px rgba(0, 20, 10, 0.4);
+    }
+
+    /* Screen shake on errors */
+    .screen-shake {
+      animation: shake 0.4s cubic-bezier(.36, .07, .19, .97) both;
+    }
+
+    @keyframes shake {
+
+      10%,
+      90% {
+        transform: translate3d(-2px, 1px, 0);
+      }
+
+      20%,
+      80% {
+        transform: translate3d(3px, -2px, 0);
+      }
+
+      30%,
+      50%,
+      70% {
+        transform: translate3d(-4px, 2px, 0);
+        filter: hue-rotate(90deg);
+      }
+
+      40%,
+      60% {
+        transform: translate3d(4px, -1px, 0);
+      }
+    }
+
+    /* Glow utilities */
+    .glow-green {
+      text-shadow: 0 0 8px rgba(0, 255, 102, 0.6), 0 0 20px rgba(0, 255, 102, 0.3);
+    }
+
+    .glow-orange {
+      text-shadow: 0 0 8px rgba(255, 153, 0, 0.6), 0 0 20px rgba(255, 153, 0, 0.3);
+    }
+
+    .glow-cyan {
+      text-shadow: 0 0 8px rgba(0, 240, 255, 0.6), 0 0 20px rgba(0, 240, 255, 0.3);
+    }
+
+    .glow-red {
+      text-shadow: 0 0 8px rgba(255, 42, 85, 0.7);
+    }
+
+    .box-glow-green {
+      box-shadow: 0 0 15px rgba(0, 255, 102, 0.25), inset 0 0 10px rgba(0, 255, 102, 0.05);
+    }
+
+    .box-glow-orange {
+      box-shadow: 0 0 15px rgba(255, 153, 0, 0.25), inset 0 0 10px rgba(255, 153, 0, 0.05);
+    }
+
+    .box-glow-red {
+      box-shadow: 0 0 20px rgba(255, 42, 85, 0.4), inset 0 0 10px rgba(255, 42, 85, 0.15);
+    }
+
+    /* Custom cyber scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #0D1117;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #1E293B;
+      border-radius: 2px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #00FF66;
+    }
+
+    /* Terminal blinking cursor */
+    .terminal-cursor {
+      display: inline-block;
+      width: 8px;
+      height: 15px;
+      background: #00FF66;
+      vertical-align: text-bottom;
+      animation: blink 1s step-end infinite;
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0;
+      }
+    }
+
+    /* Cyber matrix canvas background */
+    #matrix-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.12;
+    }
+
+    /* Badge pulse */
+    @keyframes pulse-fast {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.35;
+      }
+    }
+
+    .animate-pulse-fast {
+      animation: pulse-fast 1s ease-in-out infinite;
+    }
+  </style>
+</head>
+
+<body
+  class="font-mono bg-cyber-black text-slate-200 min-h-screen flex flex-col selection:bg-cyber-green selection:text-black">
+  <!-- CRT Scanlines & Vignette Layers (Toggleable) -->
+  <div id="crt-overlay-layer" class="crt-overlay"></div>
+  <div id="crt-vignette-layer" class="crt-vignette"></div>
+
+  <!-- Ambient Matrix Rain / Grid Canvas -->
+  <canvas id="matrix-canvas"></canvas>
+
+  <!-- ================= TOP HEADER NAVIGATION ================= -->
+  <header
+    class="relative z-10 border-b border-cyber-border bg-cyber-dark/90 backdrop-blur-md px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 select-none">
+    <!-- Left: Brand / System Info -->
+    <div class="flex items-center space-x-3">
+      <div
+        class="w-8 h-8 rounded border border-cyber-green flex items-center justify-center bg-cyber-green/10 text-cyber-green font-display font-bold text-sm shadow-[0_0_10px_rgba(0,255,102,0.3)]">
+        CH
+      </div>
+      <div>
+        <div class="flex items-center space-x-2">
+          <span class="font-display font-black text-cyber-green text-sm sm:text-base tracking-wider glow-green">CYBER
+            HEIST</span>
+          <span
+            class="text-xs px-1.5 py-0.5 rounded bg-cyber-orange/20 border border-cyber-orange text-cyber-orange font-bold uppercase tracking-widest text-[10px]">
+            v2.4 DETECTIVE
+          </span>
+        </div>
+        <div class="text-[11px] text-slate-400 flex items-center gap-2">
+          <span class="inline-block w-2 h-2 rounded-full bg-cyber-green animate-pulse-fast"></span>
+          <span>MAINFRAME INTERCEPT: <strong class="text-slate-200">ONLINE</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center: Dynamic Mission Stepper -->
+    <div id="level-nav-container" class="flex items-center space-x-1 sm:space-x-2 bg-cyber-black/70 border border-cyber-border rounded-lg p-1">
+      <!-- Dynamically generated from gameLevels in levels.js -->
+    </div>
+
+    <!-- Right: Stats & Controls -->
+    <div class="flex items-center space-x-2 text-xs">
+      <!-- Sound FX Toggle -->
+      <button id="btn-sound-toggle" onclick="audioEngine.toggleSound()" title="Toggle Retro Sound Effects"
+        class="p-1.5 rounded border border-cyber-border hover:border-cyber-green bg-cyber-panel text-slate-300 hover:text-cyber-green transition">
+        <span id="sound-icon">🔊 AUDIO: ON</span>
+      </button>
+
+      <!-- CRT Effect Toggle -->
+      <button id="btn-crt-toggle" onclick="game.toggleCRT()" title="Toggle CRT Scanline Effect"
+        class="p-1.5 rounded border border-cyber-border hover:border-cyber-orange bg-cyber-panel text-slate-300 hover:text-cyber-orange transition">
+        <span id="crt-icon">📺 CRT: ON</span>
+      </button>
+
+      <!-- Dossier / Inventory Button -->
+      <button onclick="game.openDossierModal()"
+        class="px-2.5 py-1.5 rounded border border-cyber-cyan/50 hover:border-cyber-cyan bg-cyber-cyan/10 text-cyber-cyan font-bold transition flex items-center gap-1">
+        <span>📁 DOSSIER</span>
+      </button>
+
+      <!-- Dev Auto Solve / Cheat Button -->
+      <button onclick="game.devAutoSolve()" title="Developer Solution / Hint"
+        class="px-2 py-1.5 rounded border border-purple-500/40 hover:border-purple-400 bg-purple-950/30 text-purple-300 text-[11px] font-bold transition">
+        ⚡ DEV CHEAT
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= SUB-HEADER STATUS BAR ================= -->
+  <div
+    class="relative z-10 bg-cyber-black/95 border-b border-cyber-border/70 px-4 py-1.5 text-xs flex flex-wrap items-center justify-between gap-2 text-slate-400">
+    <div class="flex items-center space-x-3">
+      <span class="flex items-center gap-1 text-cyber-orange font-bold">
+        <span>MISSION STATUS:</span>
+        <span id="header-mission-status" class="uppercase text-slate-200">IN PROGRESS (LEVEL 1/3)</span>
+      </span>
+      <span class="hidden sm:inline text-slate-600">|</span>
+      <span class="hidden sm:flex items-center gap-1.5">
+        <span>AGENT:</span>
+        <span class="text-cyber-cyan font-semibold">CYBER_CADET_#804</span>
+      </span>
+    </div>
+
+    <!-- Progress Meter -->
+    <div class="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
+      <div class="flex items-center gap-2">
+        <span class="text-[11px] text-slate-400">BREACH INTEGRITY:</span>
+        <div class="w-28 sm:w-36 h-2 bg-cyber-panel rounded-full overflow-hidden border border-cyber-border">
+          <div id="mission-progress-bar"
+            class="h-full bg-gradient-to-r from-cyber-orange to-cyber-green transition-all duration-500"
+            style="width: 33.3%;"></div>
+        </div>
+        <span id="mission-progress-text" class="text-cyber-green font-bold text-[11px]">33%</span>
+      </div>
+
+      <!-- Session Timer -->
+      <div
+        class="text-slate-300 font-mono text-[11px] bg-cyber-panel px-2 py-0.5 rounded border border-cyber-border flex items-center gap-1">
+        <span class="text-cyber-orange">⏱️</span>
+        <span id="session-timer">00:00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MAIN 3-PANEL PLAYFIELD ================= -->
+  <main class="relative z-10 flex-1 p-2.5 sm:p-4 grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 overflow-hidden">
+
+    <!-- ================= LEFT PANEL: BRIEFING & DOSSIER (col-span-3) ================= -->
+    <section class="lg:col-span-3 flex flex-col gap-3 h-full">
+
+      <!-- Handler AI Buddy Transmission Card -->
+      <div
+        class="bg-cyber-panel/90 border border-cyber-border rounded-lg p-3 sm:p-3.5 shadow-lg relative overflow-hidden flex flex-col">
+        <!-- Card Header -->
+        <div class="flex items-center justify-between border-b border-cyber-border pb-2 mb-2.5">
+          <div class="flex items-center space-x-2">
+            <!-- Animated Avatar -->
+            <div
+              class="relative w-7 h-7 rounded border border-cyber-cyan bg-cyber-cyan/10 flex items-center justify-center">
+              <span class="text-xs">🤖</span>
+              <span class="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-cyber-green animate-ping"></span>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-cyber-cyan tracking-wide font-display">NEXUS-7 // AI HANDLER</div>
+              <div class="text-[10px] text-slate-400">ENCRYPTED QUANTUM LINK</div>
+            </div>
+          </div>
+          <span
+            class="text-[10px] font-mono text-cyber-green bg-cyber-green/10 border border-cyber-green/30 px-1.5 py-0.5 rounded">
+            SYNCED
+          </span>
+        </div>
+
+        <!-- AI Dialogue Box with typing effect -->
+        <div
+          class="bg-cyber-black/70 rounded p-2.5 border border-cyber-border text-xs leading-relaxed text-slate-300 min-h-[90px] font-tech">
+          <p id="ai-handler-text" class="text-cyber-green/90">
+            Initializing transmission...
+          </p>
+        </div>
+
+        <!-- AI Hint Request Button -->
+        <div class="mt-2.5 flex items-center justify-between">
+          <button onclick="game.requestHint()"
+            class="text-[11px] px-2.5 py-1 rounded border border-cyber-yellow/40 bg-cyber-yellow/10 text-cyber-yellow hover:bg-cyber-yellow/20 font-bold transition flex items-center gap-1">
+            <span>💡 REQUEST HINT</span>
+          </button>
+          <span id="hint-count" class="text-[10px] text-slate-500">HINTS AVAILABLE</span>
+        </div>
+      </div>
+
+      <!-- Mission Briefing & Target Card -->
+      <div
+        class="bg-cyber-panel/90 border border-cyber-border rounded-lg p-3 sm:p-3.5 flex-1 flex flex-col shadow-lg overflow-y-auto">
+        <div class="flex items-center justify-between border-b border-cyber-border pb-2 mb-2.5">
+          <span class="text-xs font-bold text-cyber-orange uppercase font-display flex items-center gap-1.5">
+            <span>🎯 MISSION BRIEFING</span>
+          </span>
+          <span id="brief-level-badge"
+            class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyber-orange/15 text-cyber-orange border border-cyber-orange/40">
+            STAGE 1
+          </span>
+        </div>
+
+        <h2 id="brief-title" class="text-sm font-bold text-slate-100 mb-1">
+          THE DECRYPTOR: DATA RECOVERY
+        </h2>
+        <p id="brief-desc" class="text-xs text-slate-400 leading-relaxed mb-3">
+          Intercepted encrypted packet stream from the syndicate server. Slice through the noisy payload string to
+          isolate the authorization token.
+        </p>
+
+        <!-- Classified Target Details / Clues -->
+        <div class="bg-cyber-black/70 rounded border border-cyber-border p-2.5 mb-3">
+          <div
+            class="text-[11px] font-bold text-cyber-cyan mb-1.5 uppercase tracking-wider flex items-center justify-between">
+            <span>🔍 CLASSIFIED SPECS</span>
+            <span class="text-[10px] text-slate-500">CONFIDENTIAL</span>
+          </div>
+          <div id="brief-specs" class="text-[11px] text-slate-300 space-y-1 font-mono">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- Logic Concept Mini-Guide -->
+        <div class="mt-auto pt-2 border-t border-cyber-border">
+          <div class="text-[10px] font-bold uppercase text-slate-400 mb-1 flex items-center gap-1">
+            <span>📘 COMPUTATIONAL LOGIC CONCEPT:</span>
+          </div>
+          <div id="brief-concept-pill"
+            class="text-[11px] p-2 rounded bg-slate-900 border border-cyber-border text-slate-300 leading-snug">
+            <!-- Concept explanation -->
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+
+    <!-- ================= CENTER PANEL: CYBER WORKSPACE & CODE INJECTOR (col-span-5) ================= -->
+    <section class="lg:col-span-5 flex flex-col gap-3 h-full">
+      <div class="bg-cyber-panel/95 border border-cyber-border rounded-lg flex flex-col h-full shadow-2xl relative">
+
+        <!-- Workspace Header & Mode Selector -->
+        <div
+          class="border-b border-cyber-border p-2.5 sm:p-3 flex flex-wrap items-center justify-between gap-2 bg-cyber-dark/80 rounded-t-lg">
+          <div class="flex items-center space-x-2">
+            <span class="text-xs font-bold font-display text-cyber-green flex items-center gap-1.5">
+              <span>⚡ CYBER WORKSPACE</span>
+            </span>
+            <span class="text-slate-600">|</span>
+            <span class="text-[10px] text-slate-400">PYTHON 3.12 SYNTAX</span>
+          </div>
+
+          <!-- Dual Mode Toggle (Code vs Blocks) -->
+          <div class="flex items-center bg-cyber-black rounded p-0.5 border border-cyber-border text-xs">
+            <button id="btn-mode-code" onclick="game.setEditorMode('code')"
+              class="px-2.5 py-1 rounded font-bold text-[11px] transition bg-cyber-green/20 text-cyber-green border border-cyber-green/40">
+              &lt;/&gt; CODE EDITOR
+            </button>
+            <button id="btn-mode-blocks" onclick="game.setEditorMode('blocks')"
+              class="px-2.5 py-1 rounded font-bold text-[11px] transition text-slate-400 hover:text-slate-200">
+              🧩 BLOCK BUILDER
+            </button>
+          </div>
+        </div>
+
+        <!-- Level Clue Visualizer (e.g. Index Ruler for Level 1, Log Data Preview for Level 2) -->
+        <div id="workspace-clue-bar" class="p-2.5 bg-cyber-black/80 border-b border-cyber-border text-xs">
+          <!-- Dynamic level 1 ruler or level 2 array pills -->
+        </div>
+
+        <!-- Editor Content Area -->
+        <div class="flex-1 p-3 overflow-y-auto flex flex-col justify-between">
+
+          <!-- Mode 1: Code Mode (Text Editor with Line Numbers) -->
+          <div id="editor-mode-code" class="flex-1 flex flex-col min-h-[220px]">
+            <div class="text-[11px] text-slate-400 mb-1.5 flex items-center justify-between">
+              <span>SCRIPT EXECUTION BUFFER:</span>
+              <span class="text-[10px] text-cyber-yellow">HOTKEY: CTRL + ENTER TO RUN</span>
+            </div>
+
+            <div
+              class="flex-1 bg-cyber-black rounded-lg border border-cyber-border p-3 font-mono text-xs relative flex flex-col focus-within:border-cyber-green transition">
+              <!-- Code container injected dynamically -->
+              <div id="code-editor-container" class="flex-1 flex flex-col">
+                <!-- Injected via Level controller -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Mode 2: Block Mode (Visual Dropdowns & Slicers for Younger Students) -->
+          <div id="editor-mode-blocks" class="flex-1 flex flex-col min-h-[220px] hidden">
+            <div class="text-[11px] text-slate-400 mb-1.5 flex items-center justify-between">
+              <span>VISUAL LOGIC COMPOSER:</span>
+              <span class="text-[10px] text-cyber-cyan">DRAG & DROP / CLICK VALUES</span>
+            </div>
+
+            <div id="block-builder-container"
+              class="flex-1 bg-cyber-black rounded-lg border border-cyber-border p-3 flex flex-col justify-center space-y-3">
+              <!-- Injected via Level controller -->
+            </div>
+          </div>
+
+          <!-- Live Output Preview Bar -->
+          <div
+            class="mt-3 p-2 rounded bg-cyber-dark border border-cyber-border text-xs flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <span class="text-slate-400 text-[11px]">EVALUATED OUTPUT:</span>
+              <code id="live-evaluation-preview"
+                class="px-2 py-0.5 rounded bg-black text-cyber-green font-bold text-xs border border-cyber-green/30">
+                "NONE"
+              </code>
+            </div>
+            <span id="live-eval-status" class="text-[10px] text-slate-400">WAITING FOR EXECUTION</span>
+          </div>
+
+        </div>
+
+        <!-- Bottom Execution Action Bar -->
+        <div
+          class="border-t border-cyber-border p-3 bg-cyber-dark/90 rounded-b-lg flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center space-x-2">
+            <button onclick="game.resetCurrentLevel()"
+              class="px-2.5 py-1.5 rounded border border-cyber-border hover:border-slate-500 bg-cyber-panel text-slate-400 hover:text-slate-200 text-xs font-bold transition flex items-center gap-1">
+              <span>↺ RESET</span>
+            </button>
+            <button onclick="game.clearTerminal()"
+              class="px-2.5 py-1.5 rounded border border-cyber-border hover:border-slate-500 bg-cyber-panel text-slate-400 hover:text-slate-200 text-xs font-bold transition">
+              CLR TERM
+            </button>
+          </div>
+
+          <!-- Big Action Button: RUN / INJECT EXPLOIT -->
+          <button id="btn-run-code" onclick="game.executeExploit()"
+            class="px-5 py-2 rounded-lg bg-cyber-green hover:bg-emerald-400 text-black font-display font-black text-xs sm:text-sm tracking-wider shadow-[0_0_20px_rgba(0,255,102,0.4)] hover:shadow-[0_0_25px_rgba(0,255,102,0.6)] active:scale-95 transition-all flex items-center gap-2">
+            <span>⚡ INJECT EXPLOIT</span>
+            <span class="text-xs bg-black/30 px-1.5 py-0.5 rounded text-black font-mono font-bold">RUN</span>
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ================= RIGHT PANEL: TERMINAL & MATRIX VISUALIZER (col-span-4) ================= -->
+    <section class="lg:col-span-4 flex flex-col gap-3 h-full">
+
+      <!-- Top Half: SVG Dynamic Visualizer (Network / RAM / Quarantine Matrix) -->
+      <div
+        class="bg-cyber-panel/95 border border-cyber-border rounded-lg p-3 flex flex-col shadow-lg relative min-h-[190px]">
+        <div class="flex items-center justify-between border-b border-cyber-border pb-1.5 mb-2">
+          <span class="text-xs font-bold text-cyber-cyan font-display flex items-center gap-1.5">
+            <span>📊 MATRIX VISUALIZER</span>
+          </span>
+          <span id="visualizer-status-badge"
+            class="text-[10px] font-mono text-cyber-green bg-cyber-green/10 border border-cyber-green/30 px-1.5 py-0.5 rounded">
+            STANDBY
+          </span>
+        </div>
+
+        <!-- SVG Visualizer Canvas/Container -->
+        <div id="visualizer-container"
+          class="flex-1 bg-cyber-black rounded border border-cyber-border flex items-center justify-center p-2 overflow-hidden relative min-h-[140px]">
+          <!-- Injected SVG elements per level -->
+        </div>
+      </div>
+
+      <!-- Bottom Half: Simulated Terminal CLI (Real-time Line by Line) -->
+      <div
+        class="bg-cyber-panel/95 border border-cyber-border rounded-lg flex-1 flex flex-col shadow-xl overflow-hidden min-h-[220px]">
+        <!-- Terminal Titlebar -->
+        <div class="border-b border-cyber-border px-3 py-2 bg-cyber-dark flex items-center justify-between">
+          <div class="flex items-center space-x-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-red-500/80 inline-block"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-yellow-500/80 inline-block"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-green-500/80 inline-block"></span>
+            <span class="text-[11px] font-mono font-bold text-slate-300 ml-2">TERMINAL OUTPUT [tty1]</span>
+          </div>
+          <span class="text-[10px] text-cyber-green font-mono">ENCRYPTION: AES-GCM</span>
+        </div>
+
+        <!-- Terminal Logs Body -->
+        <div id="terminal-body"
+          class="flex-1 p-3 bg-cyber-black overflow-y-auto font-mono text-xs space-y-1 select-text">
+          <div class="text-slate-500 text-[11px]">// CYBER HEIST TERMINAL SUBSYSTEM INITIALIZED</div>
+          <div class="text-cyber-green text-[11px]">> SYSTEM READY. WAITING FOR COMMAND SCRIPT...</div>
+        </div>
+
+        <!-- Terminal Command Line Prompt bar -->
+        <div
+          class="border-t border-cyber-border px-3 py-1.5 bg-cyber-dark/80 flex items-center text-xs font-mono text-slate-300">
+          <span class="text-cyber-green font-bold mr-2">root@heist:~#</span>
+          <span id="terminal-current-cmd" class="text-slate-400 italic">idle</span>
+          <span class="terminal-cursor ml-1"></span>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ================= LEVEL SUCCESS MODAL ================= -->
+  <div id="level-success-modal"
+    class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 hidden">
+    <div
+      class="bg-cyber-panel border-2 border-cyber-green rounded-xl max-w-lg w-full p-6 shadow-[0_0_40px_rgba(0,255,102,0.35)] relative overflow-hidden flex flex-col text-center">
+      <!-- Glow effect -->
+      <div class="absolute -top-24 -left-24 w-48 h-48 bg-cyber-green/20 rounded-full blur-3xl pointer-events-none">
+      </div>
+
+      <div
+        class="w-16 h-16 rounded-full border-2 border-cyber-green bg-cyber-green/10 flex items-center justify-center mx-auto mb-4 text-cyber-green text-3xl shadow-[0_0_20px_rgba(0,255,102,0.4)]">
+        🔓
+      </div>
+
+      <span class="text-xs uppercase font-mono tracking-widest text-cyber-green font-bold mb-1">FIREWALL BYPASSED</span>
+      <h2 id="modal-success-title" class="text-2xl font-black font-display text-white tracking-wide mb-2 glow-green">
+        ACCESS GRANTED!
+      </h2>
+
+      <p id="modal-success-desc" class="text-xs sm:text-sm text-slate-300 leading-relaxed mb-6 font-mono">
+        Decryption matrix verified. You extracted the security vault key and unlocked the next syndicate node!
+      </p>
+
+      <!-- Stats Box -->
+      <div class="grid grid-cols-3 gap-2 bg-cyber-black/80 rounded-lg p-3 border border-cyber-border mb-6 text-xs">
+        <div>
+          <div class="text-slate-500 text-[10px]">TIME SPENT</div>
+          <div id="modal-stat-time" class="text-cyber-cyan font-bold font-mono text-sm">00:45</div>
+        </div>
+        <div>
+          <div class="text-slate-500 text-[10px]">ATTEMPTS</div>
+          <div id="modal-stat-attempts" class="text-cyber-orange font-bold font-mono text-sm">1</div>
+        </div>
+        <div>
+          <div class="text-slate-500 text-[10px]">LOGIC RANK</div>
+          <div class="text-cyber-green font-bold font-mono text-sm">S-RANK</div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center justify-center gap-3">
+        <button onclick="game.retryCurrentLevel()"
+          class="px-4 py-2 rounded-lg border border-cyber-border hover:border-slate-400 bg-cyber-dark text-slate-300 text-xs font-bold transition">
+          REPLAY STAGE
+        </button>
+        <button id="modal-next-btn" onclick="game.nextLevel()"
+          class="px-6 py-2.5 rounded-lg bg-cyber-green hover:bg-emerald-400 text-black font-display font-black text-sm tracking-wider shadow-[0_0_20px_rgba(0,255,102,0.4)] transition">
+          NEXT MISSION >>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= FINAL GAME VICTORY SCREEN ================= -->
+  <div id="final-victory-modal"
+    class="fixed inset-0 z-50 bg-black/90 backdrop-blur-lg flex items-center justify-center p-4 hidden">
+    <div
+      class="bg-cyber-panel border-2 border-cyber-cyan rounded-xl max-w-xl w-full p-6 sm:p-8 shadow-[0_0_60px_rgba(0,240,255,0.4)] relative overflow-hidden flex flex-col text-center">
+      <div
+        class="w-20 h-20 rounded-full border-2 border-cyber-cyan bg-cyber-cyan/15 flex items-center justify-center mx-auto mb-4 text-cyber-cyan text-4xl shadow-[0_0_25px_rgba(0,240,255,0.5)]">
+        🏆
+      </div>
+
+      <span class="text-xs uppercase font-mono tracking-widest text-cyber-cyan font-bold mb-1">ALL MAINFRAMES
+        OVERRIDDEN</span>
+      <h2 class="text-3xl font-black font-display text-white tracking-wide mb-2 glow-cyan">
+        MISSION ACCOMPLISHED!
+      </h2>
+
+      <p class="text-xs sm:text-sm text-slate-300 leading-relaxed mb-6 font-mono">
+        Cadet, you successfully completed the Cyber Heist! You have proven mastery over Core Computer Science Logic:
+      </p>
+
+      <!-- Competency Badges -->
+      <div class="space-y-2 mb-6 text-left">
+        <div class="flex items-center gap-3 p-2.5 rounded bg-cyber-black/70 border border-cyber-border">
+          <span class="text-lg">✂️</span>
+          <div>
+            <div class="text-xs font-bold text-cyber-green">1. String Indexing & Slicing</div>
+            <div class="text-[11px] text-slate-400">Mastered memory offset extraction using <code>[start:end]</code>
+              intervals.</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-3 p-2.5 rounded bg-cyber-black/70 border border-cyber-border">
+          <span class="text-lg">🔁</span>
+          <div>
+            <div class="text-xs font-bold text-cyber-orange">2. Iteration Loops & Multi-Condition Filtering</div>
+            <div class="text-[11px] text-slate-400">Processed log records using <code>for</code> loops and combined
+              <code>and / or</code> logic.</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-3 p-2.5 rounded bg-cyber-black/70 border border-cyber-border">
+          <span class="text-lg">⚡</span>
+          <div>
+            <div class="text-xs font-bold text-cyber-cyan">3. Binary Search & Bisection Algorithm</div>
+            <div class="text-[11px] text-slate-400">Reduced search complexity to $O(\log n)$ to locate targets before
+              system overheat.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Button -->
+      <button onclick="game.restartGame()"
+        class="px-8 py-3 rounded-lg bg-cyber-cyan hover:bg-cyan-300 text-black font-display font-black text-sm tracking-widest shadow-[0_0_25px_rgba(0,240,255,0.4)] transition mx-auto">
+        PLAY AGAIN / NEW AGENT PROFILE
+      </button>
+    </div>
+  </div>
+
+  <!-- ================= EVIDENCE DOSSIER MODAL ================= -->
+  <div id="dossier-modal"
+    class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div
+      class="bg-cyber-panel border border-cyber-cyan rounded-xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl flex flex-col max-h-[85vh]">
+      <div class="flex items-center justify-between border-b border-cyber-border pb-3 mb-4">
+        <div class="flex items-center space-x-2">
+          <span class="text-lg text-cyber-cyan">📁</span>
+          <span class="font-display font-bold text-base text-cyber-cyan">OPERATION DOSSIER // INTEL ARCHIVE</span>
+        </div>
+        <button onclick="game.closeDossierModal()" class="text-slate-400 hover:text-white text-lg px-2">✕</button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto space-y-4 text-xs font-mono text-slate-300 pr-1">
+        <!-- Target Syndicate -->
+        <div class="p-3 bg-cyber-black rounded border border-cyber-border">
+          <div class="font-bold text-cyber-orange mb-1 flex items-center justify-between">
+            <span>TARGET ENTITY: OMEGA CORP MAINFRAME</span>
+            <span class="text-[10px] text-red-400">THREAT: CRITICAL</span>
+          </div>
+          <p class="text-slate-400 leading-relaxed">
+            Omega Corp has deployed unauthorized surveillance subroutines across civilian networks. Your task is to
+            infiltrate their 3 defensive tiers, quarantine malicious bots, and neutralize the command port.
+          </p>
+        </div>
+
+        <!-- Python Cheat Sheet for Middle School Students -->
+        <div class="p-3 bg-cyber-black rounded border border-cyber-border">
+          <div class="font-bold text-cyber-green mb-2">PYTHON LOGIC CHEAT SHEET FOR HACKERS</div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
+            <div class="bg-cyber-dark p-2 rounded border border-cyber-border/60">
+              <span class="text-cyber-green font-bold">1. Slicing:</span>
+              <p class="text-slate-400 mt-1"><code>text[start : end]</code></p>
+              <p class="text-slate-400">Includes <code>start</code> index, stops <em>before</em> <code>end</code> index!
+              </p>
+            </div>
+            <div class="bg-cyber-dark p-2 rounded border border-cyber-border/60">
+              <span class="text-cyber-orange font-bold">2. Loop & If:</span>
+              <p class="text-slate-400 mt-1"><code>for item in list:</code></p>
+              <p class="text-slate-400"><code>if item.val > 10 and item.ok:</code></p>
+            </div>
+            <div class="bg-cyber-dark p-2 rounded border border-cyber-border/60 sm:col-span-2">
+              <span class="text-cyber-cyan font-bold">3. Binary Search:</span>
+              <p class="text-slate-400 mt-1">Split the range in half! <code>mid = (low + high) // 2</code></p>
+              <p class="text-slate-400">If response is "HIGHER", set <code>low = mid + 1</code>. If "LOWER", set
+                <code>high = mid - 1</code>.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Collected Inventory / Clues -->
+        <div class="p-3 bg-cyber-black rounded border border-cyber-border">
+          <div class="font-bold text-cyber-yellow mb-1">COLLECTED CRYPTO-KEYS & INTEL</div>
+          <div id="dossier-inventory-list" class="space-y-1.5 mt-2">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-4 border-t border-cyber-border text-right">
+        <button onclick="game.closeDossierModal()"
+          class="px-4 py-1.5 rounded bg-cyber-border hover:bg-slate-700 text-slate-200 text-xs font-bold transition">
+          CLOSE DOSSIER
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ================= JAVASCRIPT GAME LOGIC & AUDIO ENGINE ================= -->
+  <script>
+    /**
+     * RETRO SYNTHESIZER AUDIO ENGINE (Web Audio API)
+     * Generates rich 8-bit / cyber audio purely through software oscillators.
+     */
+    class CyberAudioEngine {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) {
+            this.ctx = new AudioContext();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      toggleSound() {
+        this.enabled = !this.enabled;
+        const icon = document.getElementById('sound-icon');
+        if (icon) {
+          icon.textContent = this.enabled ? '🔊 AUDIO: ON' : '🔇 AUDIO: OFF';
+        }
+        if (this.enabled) {
+          this.init();
+          this.playBeep(880, 0.08);
+        }
+      }
+
+      playBeep(freq = 600, duration = 0.06, type = 'sine', gainVal = 0.1) {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+
+          gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch (e) {
+          // Audio policy or error
+        }
+      }
+
+      playKeyClick() {
+        if (!this.enabled) return;
+        this.playBeep(1200 + Math.random() * 400, 0.03, 'triangle', 0.04);
+      }
+
+      playSuccess() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+
+        // Ascending Cyber Chord Arpeggio (C5 -> E5 -> G5 -> C6)
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((freq, idx) => {
+          setTimeout(() => {
+            this.playBeep(freq, 0.25, 'sine', 0.12);
+          }, idx * 90);
+        });
+      }
+
+      playError() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+
+        // Harsh low frequency buzzer with pitch bend
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(160, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.35);
+
+          gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.35);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.35);
+        } catch (e) { }
+      }
+
+      playRadarPing(isHigh = false) {
+        if (!this.enabled) return;
+        this.playBeep(isHigh ? 950 : 380, 0.12, 'square', 0.08);
+      }
+
+      playScan() {
+        if (!this.enabled) return;
+        this.playBeep(1400, 0.05, 'sine', 0.06);
+      }
+    }
+
+    const audioEngine = new CyberAudioEngine();
+
+
+    /**
+     * BACKGROUND MATRIX RAIN CANVAS EFFECT
+     */
+    function initMatrixCanvas() {
+      const canvas = document.getElementById('matrix-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      const letters = '01CYBERHEISTEXPLOIT404NODEPORTTOKEN';
+      const fontSize = 14;
+      const columns = Math.floor(canvas.width / fontSize);
+      const drops = Array(columns).fill(1);
+
+      function draw() {
+        ctx.fillStyle = 'rgba(8, 12, 16, 0.15)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#00FF66';
+        ctx.font = `${fontSize}px monospace`;
+
+        for (let i = 0; i < drops.length; i++) {
+          const text = letters.charAt(Math.floor(Math.random() * letters.length));
+          ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+          if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+            drops[i] = 0;
+          }
+          drops[i]++;
+        }
+      }
+      setInterval(draw, 50);
+    }
+
+
+    /**
+     * MAIN GAME ENGINE CLASS
+     */
+    class CyberHeistGame {
+      constructor() {
+        this.currentLevelIndex = 0;
+        this.editorMode = 'code'; // 'code' or 'blocks'
+        this.crtEnabled = true;
+        this.sessionSeconds = 0;
+        this.sessionTimerInterval = null;
+        this.attemptsPerLevel = {};
+        this.completedLevels = new Set();
+        this.collectedIntel = [];
+        this.levelState = {};
+        this.hintIndex = 0;
+      }
+
+      get currentLevel() {
+        return gameLevels[this.currentLevelIndex];
+      }
+
+      init() {
+        initMatrixCanvas();
+        this.startTimer();
+        this.setupKeyboardShortcuts();
+        this.renderLevelNav();
+        this.loadLevelIndex(0);
+      }
+
+      startTimer() {
+        if (this.sessionTimerInterval) clearInterval(this.sessionTimerInterval);
+        this.sessionTimerInterval = setInterval(() => {
+          this.sessionSeconds++;
+          const mins = String(Math.floor(this.sessionSeconds / 60)).padStart(2, '0');
+          const secs = String(this.sessionSeconds % 60).padStart(2, '0');
+          const el = document.getElementById('session-timer');
+          if (el) el.textContent = `${mins}:${secs}`;
+        }, 1000);
+      }
+
+      setupKeyboardShortcuts() {
+        window.addEventListener('keydown', (e) => {
+          if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+            audioEngine.playKeyClick();
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              this.executeExploit();
+              return;
+            }
+          }
+          if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            this.executeExploit();
+          }
+        });
+      }
+
+      toggleCRT() {
+        this.crtEnabled = !this.crtEnabled;
+        const crtLayer = document.getElementById('crt-overlay-layer');
+        const vigLayer = document.getElementById('crt-vignette-layer');
+        const icon = document.getElementById('crt-icon');
+
+        if (this.crtEnabled) {
+          crtLayer.style.display = 'block';
+          vigLayer.style.display = 'block';
+          if (icon) icon.textContent = '📺 CRT: ON';
+        } else {
+          crtLayer.style.display = 'none';
+          vigLayer.style.display = 'none';
+          if (icon) icon.textContent = '📺 CRT: OFF';
+        }
+        audioEngine.playBeep(450, 0.05);
+      }
+
+      setEditorMode(mode) {
+        this.editorMode = mode;
+        const codeTab = document.getElementById('btn-mode-code');
+        const blocksTab = document.getElementById('btn-mode-blocks');
+        const codeView = document.getElementById('editor-mode-code');
+        const blocksView = document.getElementById('editor-mode-blocks');
+
+        if (mode === 'code') {
+          codeTab.className = 'px-2.5 py-1 rounded font-bold text-[11px] transition bg-cyber-green/20 text-cyber-green border border-cyber-green/40';
+          blocksTab.className = 'px-2.5 py-1 rounded font-bold text-[11px] transition text-slate-400 hover:text-slate-200';
+          codeView.classList.remove('hidden');
+          blocksView.classList.add('hidden');
+        } else {
+          blocksTab.className = 'px-2.5 py-1 rounded font-bold text-[11px] transition bg-cyber-cyan/20 text-cyber-cyan border border-cyber-cyan/40';
+          codeTab.className = 'px-2.5 py-1 rounded font-bold text-[11px] transition text-slate-400 hover:text-slate-200';
+          blocksView.classList.remove('hidden');
+          codeView.classList.add('hidden');
+        }
+        audioEngine.playBeep(520, 0.04);
+        this.updateLivePreview();
+      }
+
+      renderLevelNav() {
+        const container = document.getElementById('level-nav-container');
+        if (!container) return;
+
+        container.innerHTML = gameLevels.map((lvl, idx) => {
+          const isActive = (idx === this.currentLevelIndex);
+          const isDone = this.completedLevels.has(lvl.id);
+          let btnClass = 'level-nav-btn px-2 sm:px-2.5 py-1 rounded text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ';
+          if (isActive) {
+            btnClass += 'bg-cyber-green/20 text-cyber-green border border-cyber-green/50';
+          } else if (isDone) {
+            btnClass += 'text-cyber-cyan border border-cyber-cyan/30 bg-cyber-cyan/10';
+          } else {
+            btnClass += 'text-slate-400 hover:text-slate-200 border border-transparent';
+          }
+          return `
+            <button id="nav-lvl-${lvl.id}" onclick="game.selectLevelIndex(${idx})" title="${lvl.title}" class="${btnClass}">
+              <span class="w-4 h-4 rounded-full ${isActive ? 'bg-cyber-green text-black' : (isDone ? 'bg-cyber-cyan text-black' : 'bg-slate-700 text-slate-300')} flex items-center justify-center text-[10px] font-black">${lvl.id}</span>
+              <span class="${isActive ? 'inline' : 'hidden 2xl:inline'} text-[11px] font-mono">${lvl.shortTitle || lvl.title.split('//')[0].trim()}</span>
+            </button>
+          `;
+        }).join('');
+      }
+
+      selectLevelIndex(idx) {
+        if (idx < 0 || idx >= gameLevels.length) return;
+        audioEngine.playBeep(650, 0.05);
+        this.loadLevelIndex(idx);
+      }
+
+      loadLevelIndex(idx) {
+        this.currentLevelIndex = idx;
+        const lvl = this.currentLevel;
+        if (!lvl) return;
+
+        this.levelState = lvl.initialState ? lvl.initialState() : {};
+        this.hintIndex = 0;
+        if (!this.attemptsPerLevel[lvl.id]) {
+          this.attemptsPerLevel[lvl.id] = 0;
+        }
+
+        this.renderLevelNav();
+        this.updateHeaderStatus();
+        this.clearTerminal();
+
+        // Briefing panel
+        document.getElementById('brief-level-badge').textContent = `STAGE ${lvl.id}/${gameLevels.length}`;
+        document.getElementById('brief-title').textContent = lvl.title;
+        document.getElementById('brief-desc').textContent = lvl.briefing || lvl.desc;
+
+        const specsEl = document.getElementById('brief-specs');
+        if (specsEl && lvl.specs) {
+          specsEl.innerHTML = lvl.specs.map(s => `
+            <div>${s.label}: <span class="${s.color} font-bold">${s.value}</span></div>
+          `).join('');
+        }
+
+        const conceptEl = document.getElementById('brief-concept-pill');
+        if (conceptEl && lvl.concept) {
+          conceptEl.innerHTML = lvl.concept;
+        }
+
+        this.typeAIHandler(lvl.handlerInitial || "Operative, standby for mission execution...");
+
+        this.renderClueBar();
+        this.renderEditors();
+        this.renderVisualizer();
+        this.updateLivePreview();
+      }
+
+      updateHeaderStatus() {
+        const lvl = this.currentLevel;
+        const total = gameLevels.length;
+        const completedCount = this.completedLevels.size;
+        const progressPercent = Math.max(8, Math.round(((completedCount) / total) * 100));
+
+        const bar = document.getElementById('mission-progress-bar');
+        const text = document.getElementById('mission-progress-text');
+        const status = document.getElementById('header-mission-status');
+
+        if (bar) bar.style.width = `${progressPercent}%`;
+        if (text) text.textContent = `${progressPercent}%`;
+        if (status) status.textContent = `IN PROGRESS (STAGE ${lvl.id}/${total})`;
+      }
+
+      renderClueBar() {
+        const container = document.getElementById('workspace-clue-bar');
+        if (container && this.currentLevel.renderClueBar) {
+          this.currentLevel.renderClueBar(container, this.currentLevel, this.levelState, this);
+        }
+      }
+
+      renderEditors() {
+        const codeContainer = document.getElementById('code-editor-container');
+        const blockContainer = document.getElementById('block-builder-container');
+
+        if (codeContainer && this.currentLevel.renderEditorCode) {
+          this.currentLevel.renderEditorCode(codeContainer, this.currentLevel, this.levelState, this);
+        }
+        if (blockContainer && this.currentLevel.renderEditorBlocks) {
+          this.currentLevel.renderEditorBlocks(blockContainer, this.currentLevel, this.levelState, this);
+        }
+      }
+
+      renderVisualizer() {
+        const container = document.getElementById('visualizer-container');
+        if (container && this.currentLevel.renderVisualizer) {
+          this.currentLevel.renderVisualizer(container, this.currentLevel, this.levelState, this);
+        }
+      }
+
+      updateLivePreview() {
+        const preview = document.getElementById('live-evaluation-preview');
+        const status = document.getElementById('live-eval-status');
+        if (!preview || !this.currentLevel.getLivePreview) return;
+
+        const res = this.currentLevel.getLivePreview(this.levelState, this.currentLevel);
+        preview.textContent = res.text;
+        if (res.isMatch) {
+          preview.className = 'px-2 py-0.5 rounded bg-black text-cyber-green font-bold text-xs border border-cyber-green';
+        } else {
+          preview.className = 'px-2 py-0.5 rounded bg-black text-cyber-orange font-bold text-xs border border-cyber-orange/40';
+        }
+        if (status) status.textContent = res.statusText;
+      }
+
+      handleLevelAction(action, payload) {
+        audioEngine.playKeyClick();
+        const lvl = this.currentLevel;
+
+        // Custom action handler if defined on level
+        if (lvl && lvl.handleAction) {
+          lvl.handleAction(action, payload, this.levelState, lvl, this);
+          this.updateLivePreview();
+          return;
+        }
+
+        // Standard actions
+        if (action === 'rulerClick') {
+          const idx = payload;
+          if (idx < this.levelState.userStart) {
+            this.levelState.userStart = idx;
+          } else {
+            this.levelState.userEnd = idx + 1;
+          }
+          this.syncLevelInputs();
+        } else if (action === 'codeInputChange') {
+          const startInput = document.getElementById('l1-code-start');
+          const endInput = document.getElementById('l1-code-end');
+          if (startInput && endInput) {
+            this.levelState.userStart = parseInt(startInput.value) || 0;
+            this.levelState.userEnd = parseInt(endInput.value) || 0;
+          }
+          this.syncLevelInputs();
+        } else if (action === 'sliderChange') {
+          if (payload.type === 'start') {
+            this.levelState.userStart = parseInt(payload.val);
+          } else {
+            this.levelState.userEnd = parseInt(payload.val);
+          }
+          this.syncLevelInputs();
+        } else if (action === 'filterCodeChange' || action === 'filterBlockChange') {
+          if (action === 'filterCodeChange') {
+            this.levelState.op1 = document.getElementById('l2-code-op1')?.value || '>';
+            this.levelState.val1 = parseInt(document.getElementById('l2-code-val1')?.value) || 10;
+            this.levelState.logic = document.getElementById('l2-code-logic')?.value || 'and';
+            this.levelState.val2 = (document.getElementById('l2-code-val2')?.value === 'True');
+          } else {
+            this.levelState.op1 = document.getElementById('l2-block-op1')?.value || '>';
+            this.levelState.val1 = parseInt(document.getElementById('l2-block-val1')?.value) || 10;
+            this.levelState.logic = document.getElementById('l2-block-logic')?.value || 'and';
+            this.levelState.val2 = (document.getElementById('l2-block-val2')?.value === 'True');
+          }
+          this.renderEditors();
+          this.updateLivePreview();
+        } else if (action === 'probeInputChange') {
+          const input = document.getElementById('l3-probe-input');
+          if (input) this.levelState.lastProbe = parseInt(input.value) || 50;
+          this.updateLivePreview();
+        } else if (action === 'applyMidpoint') {
+          const mid = Math.floor((this.levelState.currentLow + this.levelState.currentHigh) / 2);
+          this.levelState.lastProbe = mid;
+          const input = document.getElementById('l3-probe-input');
+          if (input) input.value = mid;
+          this.updateLivePreview();
+        }
+      }
+
+      syncLevelInputs() {
+        const startInput = document.getElementById('l1-code-start');
+        const endInput = document.getElementById('l1-code-end');
+        const startSlider = document.getElementById('l1-block-start-slider');
+        const endSlider = document.getElementById('l1-block-end-slider');
+        const startVal = document.getElementById('l1-block-start-val');
+        const endVal = document.getElementById('l1-block-end-val');
+
+        if (startInput) startInput.value = this.levelState.userStart;
+        if (endInput) endInput.value = this.levelState.userEnd;
+        if (startSlider) startSlider.value = this.levelState.userStart;
+        if (endSlider) endSlider.value = this.levelState.userEnd;
+        if (startVal) startVal.textContent = this.levelState.userStart;
+        if (endVal) endVal.textContent = this.levelState.userEnd;
+
+        this.renderClueBar();
+        this.renderVisualizer();
+        this.updateLivePreview();
+      }
+
+      executeExploit() {
+        const lvl = this.currentLevel;
+        if (!lvl) return;
+
+        this.attemptsPerLevel[lvl.id] = (this.attemptsPerLevel[lvl.id] || 0) + 1;
+
+        if (lvl.customExecute) {
+          lvl.customExecute(this.levelState, lvl, this);
+          return;
+        }
+
+        if (lvl.type === 'filter') {
+          this.executeFilterExploit(lvl);
+          return;
+        }
+
+        if (lvl.type === 'binary_search') {
+          this.executeBinarySearchExploit(lvl);
+          return;
+        }
+
+        // Standard validation
+        const validator = lvl.validate || lvl.expectedLogic;
+        const res = validator ? validator(this.levelState, lvl, this) : { success: true };
+        if (res.success && !res.message) res.message = lvl.successMessage || "ACCESS GRANTED: OPERATION SUCCESSFUL!";
+        if (!res.success && !res.message) res.message = lvl.failMessage || "⚠️ ERROR: VERIFICATION FAILED!";
+        this.logTerminal(`EXEC: SCRIPT INJECTION`, 'cmd');
+
+        if (res.success) {
+          audioEngine.playSuccess();
+          this.logTerminal(`OUTPUT: "${res.output}"`, 'highlight');
+          this.logTerminal(res.message, 'success');
+          this.onLevelCompleted(lvl, res);
+        } else {
+          this.triggerScreenGlitch();
+          this.logTerminal(`OUTPUT: "${res.output}"`, 'warning');
+          this.logTerminal(res.message, 'error');
+        }
+      }
+
+      executeFilterExploit(lvl) {
+        this.logTerminal("RUNNING QUARANTINE FILTER SCRIPT...", 'cmd');
+        audioEngine.playScan();
+
+        const matches = lvl.evaluateMatches(this.levelState, lvl);
+        let step = 0;
+        const total = lvl.rawData.length;
+        const quarantined = [];
+
+        const scanInterval = setInterval(() => {
+          if (step < total) {
+            const currentLog = lvl.rawData[step];
+            audioEngine.playKeyClick();
+
+            if (matches.includes(currentLog.ip)) {
+              quarantined.push(currentLog.ip);
+              this.logTerminal(`[PACKET ${step + 1}/${total}] ${currentLog.ip} (Attempts: ${currentLog.attempts}) -> 🔒 THREAT QUARANTINED!`, 'warning');
+            } else {
+              this.logTerminal(`[PACKET ${step + 1}/${total}] ${currentLog.ip} -> PASS (Safe Session)`, 'info');
+            }
+
+            this.levelState.activeScanningId = currentLog.id;
+            this.levelState.quarantinedIps = [...quarantined];
+            this.renderVisualizer();
+            step++;
+          } else {
+            clearInterval(scanInterval);
+            this.levelState.activeScanningId = null;
+            this.renderVisualizer();
+
+            const res = lvl.validate(this.levelState, lvl, this);
+            if (res.success) {
+              audioEngine.playSuccess();
+              this.logTerminal(res.message, 'success');
+              this.onLevelCompleted(lvl, res);
+            } else {
+              this.triggerScreenGlitch();
+              this.logTerminal(res.message, 'error');
+            }
+          }
+        }, 120);
+      }
+
+      executeBinarySearchExploit(lvl) {
+        const input = document.getElementById('l3-probe-input');
+        if (input) this.levelState.lastProbe = parseInt(input.value) || 50;
+
+        const probeVal = this.levelState.lastProbe;
+        this.logTerminal(`PROBING PORT ${probeVal}...`, 'cmd');
+
+        this.levelState.attemptsLeft--;
+        this.levelState.overclockTemp += 11;
+        this.renderClueBar();
+
+        const res = lvl.validate(this.levelState, lvl, this);
+
+        if (res.success) {
+          audioEngine.playSuccess();
+          this.logTerminal(res.message, 'success');
+          this.renderVisualizer();
+          setTimeout(() => {
+            this.onLevelCompleted(lvl, res);
+          }, 700);
+          return;
+        }
+
+        if (res.status === 'BURNOUT') {
+          this.triggerScreenGlitch();
+          this.logTerminal(res.message, 'error');
+          setTimeout(() => {
+            this.levelState = lvl.initialState();
+            this.renderClueBar();
+            this.renderVisualizer();
+            this.renderEditors();
+          }, 1200);
+          return;
+        }
+
+        if (res.status === 'HIGHER') {
+          audioEngine.playRadarPing(true);
+          this.logTerminal(res.message, 'warning');
+        } else {
+          audioEngine.playRadarPing(false);
+          this.logTerminal(res.message, 'warning');
+        }
+
+        this.renderVisualizer();
+        this.renderEditors();
+        this.updateLivePreview();
+      }
+
+      onLevelCompleted(lvl, res) {
+        this.completedLevels.add(lvl.id);
+        if (res.intelName && res.intelValue) {
+          this.collectedIntel.push({
+            stage: `Stage ${lvl.id}`,
+            name: res.intelName,
+            val: res.intelValue
+          });
+        }
+        this.renderLevelNav();
+        this.updateHeaderStatus();
+        this.showLevelSuccessModal(
+          `STAGE ${lvl.id} OVERRIDDEN`,
+          res.successModalDesc || res.message
+        );
+      }
+
+      showLevelSuccessModal(title, desc) {
+        const modal = document.getElementById('level-success-modal');
+        const modalTitle = document.getElementById('modal-success-title');
+        const modalDesc = document.getElementById('modal-success-desc');
+        const statTime = document.getElementById('modal-stat-time');
+        const statAttempts = document.getElementById('modal-stat-attempts');
+        const nextBtn = document.getElementById('modal-next-btn');
+
+        if (modalTitle) modalTitle.textContent = title;
+        if (modalDesc) modalDesc.textContent = desc;
+
+        const mins = String(Math.floor(this.sessionSeconds / 60)).padStart(2, '0');
+        const secs = String(this.sessionSeconds % 60).padStart(2, '0');
+        if (statTime) statTime.textContent = `${mins}:${secs}`;
+        if (statAttempts) statAttempts.textContent = this.attemptsPerLevel[this.currentLevel.id] || 1;
+
+        const isLastLevel = (this.currentLevelIndex >= gameLevels.length - 1);
+        if (nextBtn) {
+          nextBtn.textContent = isLastLevel ? 'VIEW MISSION DEBRIEFING >>' : `PROCEED TO STAGE ${this.currentLevel.id + 1} >>`;
+        }
+
+        modal.classList.remove('hidden');
+      }
+
+      nextLevel() {
+        const modal = document.getElementById('level-success-modal');
+        modal.classList.add('hidden');
+
+        if (this.currentLevelIndex < gameLevels.length - 1) {
+          this.loadLevelIndex(this.currentLevelIndex + 1);
+        } else {
+          this.showVictoryModal();
+        }
+      }
+
+      retryCurrentLevel() {
+        document.getElementById('level-success-modal').classList.add('hidden');
+        this.loadLevelIndex(this.currentLevelIndex);
+      }
+
+      resetCurrentLevel() {
+        audioEngine.playBeep(400, 0.05);
+        this.loadLevelIndex(this.currentLevelIndex);
+      }
+
+      showVictoryModal() {
+        audioEngine.playSuccess();
+        const victoryModal = document.getElementById('final-victory-modal');
+        if (victoryModal) victoryModal.classList.remove('hidden');
+      }
+
+      restartGame() {
+        document.getElementById('final-victory-modal').classList.add('hidden');
+        this.sessionSeconds = 0;
+        this.completedLevels.clear();
+        this.collectedIntel = [];
+        this.attemptsPerLevel = {};
+        this.loadLevelIndex(0);
+      }
+
+      requestHint() {
+        audioEngine.playBeep(700, 0.08);
+        const lvl = this.currentLevel;
+        if (!lvl) return;
+
+        if (lvl.hints && lvl.hints.length > 0) {
+          const hint = lvl.hints[this.hintIndex % lvl.hints.length];
+          this.typeAIHandler(`HINT: ${hint}`);
+          this.hintIndex++;
+        } else {
+          this.typeAIHandler("NEXUS-7: Examine the raw specs and clue bar carefully!");
+        }
+      }
+
+      devAutoSolve() {
+        audioEngine.playBeep(990, 0.1);
+        const lvl = this.currentLevel;
+        if (!lvl) return;
+
+        if (lvl.autoSolve) {
+          lvl.autoSolve(this.levelState, lvl, this);
+          this.logTerminal(`DEV CHEAT: Auto-solved parameters for Stage ${lvl.id}`, 'warning');
+          this.renderClueBar();
+          this.renderEditors();
+          this.renderVisualizer();
+          this.updateLivePreview();
+          this.executeExploit();
+        }
+      }
+
+      typeAIHandler(text) {
+        const el = document.getElementById('ai-handler-text');
+        if (!el) return;
+        el.innerHTML = '';
+        let i = 0;
+        const speed = 14;
+        function type() {
+          if (i < text.length) {
+            el.innerHTML += text.charAt(i);
+            i++;
+            setTimeout(type, speed);
+          }
+        }
+        type();
+      }
+
+      logTerminal(msg, type = 'info') {
+        const body = document.getElementById('terminal-body');
+        if (!body) return;
+
+        const line = document.createElement('div');
+        line.className = 'font-mono text-xs leading-relaxed animate-fade-in';
+        const timestamp = new Date().toTimeString().split(' ')[0];
+
+        if (type === 'cmd') {
+          line.className += ' text-cyber-green font-bold';
+          line.innerHTML = `<span class="text-slate-500">[${timestamp}]</span> <span class="text-cyber-green font-bold">root@heist:~#</span> ${msg}`;
+        } else if (type === 'success') {
+          line.className += ' text-cyber-green font-bold bg-cyber-green/10 p-1 rounded border-l-2 border-cyber-green';
+          line.innerHTML = `<span class="text-cyber-green">[GRANTED]</span> ${msg}`;
+        } else if (type === 'error') {
+          line.className += ' text-cyber-red font-bold bg-cyber-red/10 p-1 rounded border-l-2 border-cyber-red';
+          line.innerHTML = `<span class="text-cyber-red">[ALERT ⚠️]</span> ${msg}`;
+        } else if (type === 'warning') {
+          line.className += ' text-cyber-orange';
+          line.innerHTML = `<span class="text-cyber-orange">[WARN]</span> ${msg}`;
+        } else if (type === 'highlight') {
+          line.className += ' text-cyber-cyan font-bold';
+          line.innerHTML = `<span class="text-cyber-cyan">[ANALYSIS]</span> ${msg}`;
+        } else {
+          line.className += ' text-slate-300';
+          line.innerHTML = `<span class="text-slate-500">[${timestamp}]</span> ${msg}`;
+        }
+
+        body.appendChild(line);
+        body.scrollTop = body.scrollHeight;
+
+        const currentCmd = document.getElementById('terminal-current-cmd');
+        if (currentCmd && type === 'cmd') {
+          currentCmd.textContent = msg;
+        }
+      }
+
+      clearTerminal() {
+        const body = document.getElementById('terminal-body');
+        if (body) {
+          body.innerHTML = `
+            <div class="text-slate-500 text-[11px]">// TERMINAL CLEARED. STAGE ${this.currentLevel ? this.currentLevel.id : 1} ACTIVE.</div>
+            <div class="text-cyber-green text-[11px]">> READY FOR EXPLOIT INJECTION...</div>
+          `;
+        }
+      }
+
+      triggerScreenGlitch() {
+        audioEngine.playError();
+        document.body.classList.add('screen-shake');
+        setTimeout(() => {
+          document.body.classList.remove('screen-shake');
+        }, 450);
+      }
+
+      openDossierModal() {
+        audioEngine.playBeep(600, 0.05);
+        const list = document.getElementById('dossier-inventory-list');
+        if (list) {
+          if (this.collectedIntel.length === 0) {
+            list.innerHTML = `<div class="text-slate-500 italic">No encrypted tokens captured yet. Complete stages to unlock.</div>`;
+          } else {
+            list.innerHTML = this.collectedIntel.map(item => `
+              <div class="p-2 rounded bg-cyber-dark border border-cyber-border flex items-center justify-between">
+                <div>
+                  <span class="text-cyber-green font-bold text-[10px]">[${item.stage}]</span>
+                  <span class="text-slate-300 ml-1">${item.name}:</span>
+                </div>
+                <code class="text-cyber-cyan font-bold">${item.val}</code>
+              </div>
+            `).join('');
+          }
+        }
+        document.getElementById('dossier-modal').classList.remove('hidden');
+      }
+
+      closeDossierModal() {
+        document.getElementById('dossier-modal').classList.add('hidden');
+      }
+    }
+
+    // Initialize Game reliably across all browser execution environments
+    const game = new CyberHeistGame();
+    if (document.readyState === 'loading') {
+      window.addEventListener('DOMContentLoaded', () => game.init());
+    } else {
+      game.init();
+    }
+  </script>
+</body>
+
+</html>
